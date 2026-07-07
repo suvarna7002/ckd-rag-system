@@ -1,7 +1,6 @@
 from typing import List, Dict, Any
 import re
 
-
 def estimate_tokens(text: str) -> int:
     """
     Rough token estimation using word count.
@@ -12,29 +11,48 @@ def estimate_tokens(text: str) -> int:
 
 def clean_text(text: str) -> str:
     """
-    Normalize whitespace while preserving readability.
+    Normalize whitespace while preserving readability and structural newlines.
     """
-    text = re.sub(r"\s+", " ", text)
+    # **NEW FIX**: Collapse horizontal spaces but preserve newlines for list-splitting
+    text = re.sub(r"[ \t]+", " ", text) 
+    # Normalize excessive consecutive newlines down to a max of two
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 
 def split_text(text: str, max_chars: int = 4000, overlap_chars: int = 500) -> List[str]:
     """
-    Splits text into chunks while trying to preserve sentence boundaries.
+    Splits text into chunks while trying to preserve sentence and list boundaries.
     """
     chunks = []
 
     while len(text) > max_chars:
+        # 1. Primary Strategy: Try splitting on a sentence boundary
         split_point = text[:max_chars].rfind(". ")
 
-        # FIX 1: Prevent infinite loop by forcing hard-split if boundary is missing or too early
+        # **NEW FIX**: 2. Secondary Strategy: Fallback to newline splitting for lists/tables
+        if split_point == -1 or split_point <= overlap_chars:
+            split_point = text[:max_chars].rfind("\n")
+
+        # 3. Tertiary Strategy: Force hard character split if all else fails
         if split_point == -1 or split_point <= overlap_chars:
             split_point = max_chars
+        else:
+            # Include the split character (period or newline) in the chunk
+            split_point += 1
 
-        chunk = text[:split_point + 1].strip()
+        chunk = text[:split_point].strip()
         chunks.append(chunk)
 
-        text = text[max(0, split_point + 1 - overlap_chars):]
+        # Calculate raw overlap start
+        overlap_start = max(0, split_point - overlap_chars)
+        
+        # **NEW FIX**: Move forward to the next space so the overlap chunk starts with a whole word
+        next_space = text[overlap_start:].find(" ")
+        if next_space != -1 and (overlap_start + next_space) < split_point:
+            overlap_start += next_space + 1
+
+        text = text[overlap_start:]
 
     if text.strip():
         chunks.append(text.strip())
@@ -77,7 +95,7 @@ def chunk_pages(
     for page in pages:
         section = page["metadata"].get("section")
 
-        # FIX 2: Evaluate section change BEFORE updating tracking variables
+        # Evaluate section change BEFORE updating tracking variables
         if current_pages and section and section != current_section:
             new_chunks = build_chunks(
                 current_pages,
@@ -87,7 +105,7 @@ def chunk_pages(
                 overlap_chars
             )
             chunks.extend(new_chunks)
-            # FIX 3: Increment by chunk counts, not page counts
+            # Increment by chunk counts, not page counts
             chunk_counter += len(new_chunks)
             current_pages = []
 
@@ -120,7 +138,8 @@ def build_chunks(
     """
     Builds chunks from pages belonging to the same section.
     """
-    combined_text = " ".join(
+    # **NEW FIX**: Join pages with a newline instead of a space to preserve structure
+    combined_text = "\n".join(
         clean_text(page["text"])
         for page in pages
     )

@@ -216,5 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-data/raw/
+data/raw/a
 chroma_db/
+
+
+#api keys
+.env
