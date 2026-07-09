@@ -2,7 +2,7 @@ import os
 import json
 import chromadb
 import time
-from embedder import embed_text
+from src.retrieval.embedder import embed_text
 
 # 1. Dynamically calculate absolute paths based on your folder structure
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

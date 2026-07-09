@@ -219,6 +219,11 @@ __marimo__/
 data/raw/a
 chroma_db/
 
+# Core System Data & Indexes
+chroma_db/
+data/raw/
+data/processed/
+
 
 #api keys
 .env

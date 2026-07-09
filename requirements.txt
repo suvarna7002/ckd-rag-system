@@ -4,3 +4,4 @@ openai>=1.0.0
 rank_bm25>=0.2.2
 tiktoken
 python-dotenv
+sentence-transformers>=3.0.0
