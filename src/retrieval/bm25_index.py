@@ -41,6 +41,23 @@ class BM25Corpus:
     texts: list[str]
 
 
+# ---------------------------------------------------------------------------
+# Namespace Interceptor for Pickle
+# ---------------------------------------------------------------------------
+class BM25CustomUnpickler(pickle.Unpickler):
+    """Custom unpickler to transparently resolve the '__main__' namespace trap.
+    
+    When running this file directly with `python -m src.retrieval.bm25_index`, 
+    pickle serializes BM25Corpus under the namespace '__main__.BM25Corpus'.
+    This interceptor ensures that downstream scripts running from separate execution 
+    contexts (like test_pipeline.py) redirect lookups cleanly to this module.
+    """
+    def find_class(self, module: str, name: str) -> Any:
+        if module == "__main__" and name == "BM25Corpus":
+            return BM25Corpus
+        return super().find_class(module, name)
+
+
 def load_chunks(chunks_path: Path) -> list[dict[str, Any]]:
     """Load the chunk records produced by the chunking pipeline.
 
@@ -137,7 +154,8 @@ def load_bm25_corpus(index_path: Path) -> BM25Corpus:
             "Run this script to build one first."
         )
     with index_path.open("rb") as f:
-        corpus: BM25Corpus = pickle.load(f)
+        # Use custom unpickler instead of standard pickle.load to prevent namespace errors
+        corpus: BM25Corpus = BM25CustomUnpickler(f).load()
     return corpus
 
 
