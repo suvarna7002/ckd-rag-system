@@ -95,8 +95,12 @@ def chunk_pages(
     for page in pages:
         section = page["metadata"].get("section")
 
-        # Evaluate section change BEFORE updating tracking variables
-        if current_pages and section and section != current_section:
+        # FIX:
+        # Now we flush on ANY section change, including into or out of an
+        # undetected heading — a page with no detected heading still closes
+        # out whatever section preceded it, bounding each group at the page
+        # level instead of merging indefinitely.
+        if current_pages and section != current_section:
             new_chunks = build_chunks(
                 current_pages,
                 current_section,
@@ -109,8 +113,11 @@ def chunk_pages(
             chunk_counter += len(new_chunks)
             current_pages = []
 
-        if section:
-            current_section = section
+        # FIX: Now an undetected
+        # heading gets its own distinct, page-tagged label so it neither
+        # merges backward nor collides with a genuinely different undetected
+        # page elsewhere in the document.
+        current_section = section if section else f"Unlabeled (p.{page['metadata']['page']})"
 
         current_pages.append(page)
 
