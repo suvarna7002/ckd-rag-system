@@ -13,7 +13,7 @@ from src.generation.generator import ClinicalGenerator
 from src.generation.citation_verifier import CitationVerifier
 from src.generation.response_builder import ResponseBuilder
 
-QUERY = "What is the eGFR threshold for stage G3b?"
+QUERY = "What is the dialysis protocol for pediatric G5 patients on ECMO?"
 
 # 1. Retrieve + fuse + rerank (Phase 2)
 engine = HybridEngine(dense_weight=0.5, sparse_weight=0.5)

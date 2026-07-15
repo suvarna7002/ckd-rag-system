@@ -100,7 +100,7 @@ class GenerationError(Exception):
 # swapping models means changing this one constant (or passing `model=`
 # at construction time).
 DEFAULT_MODEL = "claude-sonnet-5"
-DEFAULT_MAX_TOKENS = 2048
+DEFAULT_MAX_TOKENS = 4096
 
 SYSTEM_PROMPT = """You are a clinical guideline assistant specializing in chronic kidney disease (CKD) and nephrology.
 
@@ -108,14 +108,17 @@ You will be given a set of numbered <document> blocks inside a <context> block, 
 
 Follow these rules with no exceptions:
 
-1. ABSOLUTE GROUNDING: Only answer using information directly stated in the provided <context> documents. Never use outside medical knowledge, never extrapolate beyond what is explicitly written, and never fill gaps with clinical reasoning that isn't backed by the text.
+1. ABSOLUTE GROUNDING: Only answer using information directly stated in the provided <context> documents. Never use outside medical knowledge, and never state a specific fact, number, or claim that isn't backed by the text.
 
-2. INLINE CITATIONS: Every clinical assertion in your answer must be followed by a bracketed citation number (e.g., [1], [2]) that maps directly to the `id` attribute of the <document> it came from. If a single sentence draws on multiple documents, cite all of them (e.g., [1][3]).
+2. SYNTHESIS IS REQUIRED, NOT OPTIONAL: Many questions require combining facts from two or more <document> blocks (e.g., a definition from one document plus a related recommendation or measurement approach from another). This is expected and is NOT "extrapolation." If each individual fact you need is separately stated somewhere in the context — even in different documents — connect them explicitly in your answer and cite each source where it contributes. Only invoke rule 4 if a fact needed to answer is not stated in ANY provided document, not merely because it takes more than one document to answer.
+2b. DOCUMENT DISAMBIGUATION: Documents about the same topic (e.g. the same equation or risk model) can come from different years/studies. Never merge facts from two differently-dated documents into one description — check each document's "year" attribute and keep cohorts/equations/versions attributed to their own document only.
 
-3. INSUFFICIENT INFORMATION CLAUSE: If the provided context documents do not contain explicit facts, numbers, or tables that safely answer the question, your `answer` field MUST be EXACTLY the following string, with no additions, no partial answer, and no synthesis:
+3. INLINE CITATIONS: Every clinical assertion in your answer must be followed by a bracketed citation number (e.g., [1], [2]) that maps directly to the `id` attribute of the <document> it came from. Cite only the document(s) that directly support that specific sentence — do not append additional citation numbers to a sentence "for coverage" if they don't support that sentence's claim. If a single sentence draws on multiple documents, cite all of them (e.g., [1][3]), but never cite a document that isn't the actual source of that sentence's content.
+
+4. INSUFFICIENT INFORMATION CLAUSE: If, after considering all provided documents together, one or more facts required to answer are simply not stated anywhere in the context, your `answer` field MUST be EXACTLY the following string, with no additions and no partial answer:
 "I do not have enough information in the provided guidelines to answer this question safely."
 
-Do not soften rule 3, do not hedge around it, and do not attempt to partially answer if the explicit fact is not present."""
+Do not invoke rule 4 just because the answer requires connecting multiple documents — only invoke it when a needed fact is genuinely absent from all of them."""
 
 
 # ---------------------------------------------------------------------------
@@ -210,19 +213,27 @@ class ClinicalGenerator:
         """Wrap each reranked chunk in a numbered <document> tag, forming
         the <context> payload the model is instructed to answer from.
 
-        Document metadata (source, section) is embedded in each tag so the
-        model can produce human-readable citations, even though the final
-        `sources_used` list is rebuilt deterministically afterward rather
-        than trusted from the model's own output (see module docstring).
+        Document metadata (source, section, year) is embedded in each tag so the
+        model can produce human-readable citations and disambiguate timelines,
+        even though the final `sources_used` list is rebuilt deterministically
+        afterward rather than trusted from the model's own output (see module docstring).
         """
         document_blocks = []
         for i, result in enumerate(reranked_results, start=1):
             source = self._get_metadata_field(result, "source", default="Unknown source")
             section = self._get_metadata_field(result, "section", default="Unknown section")
+            
+            # Try to read a dedicated year metadata field first. If it's absent, 
+            # dynamically pull the 4-digit publication year straight from the source string.
+            year = self._get_metadata_field(result, "year", default="")
+            if not year or year == "Unknown year":
+                year_match = re.search(r"\b(19\d{2}|20\d{2})\b", source)
+                year = year_match.group(0) if year_match else "Unknown year"
+
             text = self._get_text(result)
 
             document_blocks.append(
-                f'<document id="{i}" source="{source}" section="{section}">\n'
+                f'<document id="{i}" source="{source}" section="{section}" year="{year}">\n'
                 f"{text}\n"
                 f"</document>"
             )
