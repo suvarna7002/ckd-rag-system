@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps needed by pymupdf / sentence-transformers wheels on slim images
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY api ./api
+COPY src ./src
+COPY data ./data
+
+# chroma_db is a mounted volume in docker-compose, not baked into the image —
+# ingestion/eval runs on the host populate it, and the volume mount below
+# keeps it out of the image so rebuilds don't duplicate gigabytes of vectors.
+
+ENV PYTHONPATH=/app
+
+EXPOSE 8000
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
