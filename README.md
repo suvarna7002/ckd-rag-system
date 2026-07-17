@@ -134,12 +134,5 @@ python -m src.evaluation.evaluator
 
 ---
 
-## Screenshots
 
-<!--
-![Ask page](docs/screenshot-ask.png)
-![Citation verification](docs/screenshot-citations.png)
--->
-
----
 
