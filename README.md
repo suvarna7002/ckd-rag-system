@@ -67,7 +67,7 @@ flowchart LR
 |---|---|
 | Language | Python 3.11 |
 | PDF parsing | PyMuPDF |
-| Chunking | Hand-rolled, section-aware (no LangChain) |
+| Chunking | Custom section-aware chunking (no LangChain) |
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Vector store | ChromaDB (persistent, cosine space) |
 | Sparse retrieval | `rank_bm25` |
