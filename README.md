@@ -2,7 +2,7 @@
 
 A citation-verified Retrieval-Augmented Generation system for chronic kidney disease (CKD) clinical guidelines — hybrid retrieval, cross-encoder reranking, grounded generation, and independent LLM-as-judge citation verification, served via FastAPI with a Streamlit frontend.
 
-**What this demonstrates:**
+**Key Features**
 - Hybrid retrieval (dense embeddings + BM25) fused via Reciprocal Rank Fusion, not dense-only search
 - A verification layer that checks every generated citation against its source chunk, independent of the generation call
 - A 30-case automated evaluation harness scoring retrieval hit rate, correctness, faithfulness, and citation accuracy across five test categories
