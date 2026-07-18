@@ -7,7 +7,7 @@ A citation-verified Retrieval-Augmented Generation system for chronic kidney dis
 - A verification layer that checks every generated citation against its source chunk, independent of the generation call
 - A 30-case automated evaluation harness scoring retrieval hit rate, correctness, faithfulness, and citation accuracy across five test categories
 - Production FastAPI service (lifespan-managed state, structured Pydantic responses, background-task ingestion) — not a notebook
-- Hand-rolled chunking/fusion/verification logic — no LangChain
+- Custom section-aware chunking/fusion/verification logic — no LangChain
 
 ---
 
